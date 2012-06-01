@@ -1,102 +1,138 @@
 package tones;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.SourceDataLine;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.SourceDataLine;
+
 import java.awt.BorderLayout;
-import java.awt.Button;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Rectangle;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.SourceDataLine;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.SwingUtilities;
 
+ 
+/* ScrollDemo2.java requires no other files. */
+public class DifferenceTonesGUI extends JPanel
+                         implements MouseListener,MouseMotionListener{
+	public final int RESIZE_AMOUNT = 100; 
+	
+	private Dimension area_; //indicates area taken up by graphics
+    private ToneCanvas drawingPane_;
+    private ButtonPanel buttons_;
+    private AudioFormat af_;
+    public DifferenceTonesGUI() {
+        super(new BorderLayout());
+        area_ = new Dimension(0,0);
+        af_  = new AudioFormat(Tone.SAMPLE_RATE, 8, 1, true, true); 
+        //Set up the drawing area.
+        drawingPane_ = new ToneCanvas(this);
+        drawingPane_.setBackground(Color.white);
+        drawingPane_.addMouseListener(this);
+        drawingPane_.addMouseMotionListener(this);
+        //Put the drawing area in a scroll pane.
+        JScrollPane scroller = new JScrollPane(drawingPane_);
+        scroller.setPreferredSize(new Dimension(200,200));
+        add(scroller, BorderLayout.CENTER);
+        buttons_ = new ButtonPanel(this);
+        add(buttons_,BorderLayout.WEST);
+    }
+ 
+    public void play(){
+    	try {
+	    	SourceDataLine line = AudioSystem.getSourceDataLine(af_);
+			line.open(af_, Tone.SAMPLE_RATE);
+			line.flush();
+//	    	PlayThread thread1 = new PlayThread(drawingPane_.synthesizeTones(),line);
+			PlayThread thread1 = new PlayThread(Tone.generateChromaticScale(500),line);
+	    	buttons_.playButton_.setEnabled(false);
+	    	thread1.start();
+	    	thread1.join();
+	    	buttons_.playButton_.setEnabled(true);
+	    	line.close();
+    	}catch(Exception e){
+    		e.printStackTrace();
+    	}
+    }
+    
+    //Handle mouse events.
+    public void mouseReleased(MouseEvent e) {
+        boolean changed = false;
+        if (SwingUtilities.isRightMouseButton(e)) {
+            //This will clear the graphic objects.
+            area_.width=0;
+            area_.height=0;
+            changed = true;
+            drawingPane_.clearNotes();
+        } else {
+            int x = e.getX() - RESIZE_AMOUNT/2;
+            int y = e.getY() - RESIZE_AMOUNT/2;
+            if (x < 0) x = 0;
+            if (y < 0) y = 0;
+            Rectangle rect = new Rectangle(x, y, RESIZE_AMOUNT, RESIZE_AMOUNT);
+            drawingPane_.scrollRectToVisible(rect);
+            drawingPane_.addNote(e.getX(),e.getY(),buttons_.getNoteLength().ordinal());
+            int this_width = (x + RESIZE_AMOUNT*2 + 2);
+            if (this_width > area_.width) {
+                area_.width = this_width; changed=true;
+            }
+        }
+        if (changed) {
+            drawingPane_.setPreferredSize(area_);
+            drawingPane_.revalidate();
+        }
+        drawingPane_.repaint();
+        drawingPane_.temp_width_ = -1;
+    }
+    public void mouseClicked(MouseEvent e){
+        drawingPane_.temp_width_ = -1;
+		drawingPane_.temp_note_.obj_1_ = e.getX();
+		drawingPane_.temp_note_.obj_2_ = e.getY();
+    }
+    public void mouseEntered(MouseEvent e){}
+    public void mouseExited(MouseEvent e){}
+    public void mousePressed(MouseEvent e){} 
+	public void mouseDragged(MouseEvent e) {
+		drawingPane_.temp_note_.obj_1_ = e.getX();
+		drawingPane_.temp_note_.obj_2_ = e.getY();
+		drawingPane_.temp_width_ = buttons_.getNoteLength().ordinal();
+		drawingPane_.revalidate();
+		drawingPane_.repaint();
+	}
 
-public class DifferenceTonesGUI extends JFrame {
-public static final int WIDTH = 500;
-public static final int HEIGHT= 300;
-public static final String PLAY_BUTTON = "Play";
-private Button playButton_;
-private AudioFormat af_;
-private SourceDataLine line_;
-	public DifferenceTonesGUI() throws LineUnavailableException{
-		super("DifferenceTones");
-		af_  = new AudioFormat(Tone.SAMPLE_RATE, 8, 1, true, true);
-		line_ = AudioSystem.getSourceDataLine(af_);
-		line_.open(af_, Tone.SAMPLE_RATE);
-        line_.start();
-		createInterface();
+	public void mouseMoved(MouseEvent e) {
 	}
-	public void createInterface(){
-		setResizable(false);
-		addWindowListener(new WindowAdapter() {public void
-			windowClosing(WindowEvent e) {closeWindow();}});
-		setSize(WIDTH,HEIGHT);
-		setLayout(new BorderLayout());
-		playButton_ = new Button(PLAY_BUTTON);
-		playButton_.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				if(arg0.getActionCommand() == PLAY_BUTTON){
-					line_.drain();
-					playButton_.setEnabled(false);
-					play();
-					playButton_.setEnabled(true);
-				}
-			}
-		});
-		add(playButton_,BorderLayout.SOUTH);
+	public ButtonPanel getButtonPanel(){
+		return buttons_;
 	}
-	public void play(){
-		System.out.println("Playing Melody");
-		try {
-			PlayThread thread1 = new PlayThread(Tone.generateChromaticScale(line_, 1000));
-			PlayThread thread2 = new PlayThread(Tone.generateChromaticScale(line_, 1000));
-			thread1.start();
-			thread2.start();
-			thread1.join();
-			thread2.join();
-		}catch (Exception e){
-			System.out.println("Exception");
-		}
+
+	private static void createAndShowGUI() {
+        //Create and set up the window.
+        JFrame frame = new JFrame("Difference Tones");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setPreferredSize(new Dimension(800,600));
+        frame.setResizable(false);
+        //Create and set up the content pane.
+        JComponent newContentPane = new DifferenceTonesGUI();
+        newContentPane.setOpaque(true); //content panes must be opaque
+        frame.setContentPane(newContentPane);
+        
+        //Display the window.
+        frame.pack();
+        frame.setVisible(true);
 	}
-	
-	public void closeWindow(){
-		if(line_ != null)
-			line_.close();
-		System.exit(0);
-	}
-	public static void main(String[] args) {
-		try{
-		DifferenceTonesGUI gui = new DifferenceTonesGUI();
-		gui.setVisible(true);
-		}catch(Exception e){
-			System.out.println("FAAIIILLL!");
-		}
-	}
-	
-	private class PlayThread extends Thread{
-		Tone[] toneList_;
-	//TODO make each thread play on their own line thingy	
-		public PlayThread(Tone[] notes){
-			toneList_ = notes;			
-		}
-		
-		@Override
-		public void run(){
-			try{
-				 for  (Tone n : toneList_) {
-					 n.play();
-				 }
-			}
-			catch(Exception e){
-				System.out.println("Thread: " + this.getId() + " could not play tone");
-			}
-		}
-	}
+ 
+    public static void main(String[] args) {
+        javax.swing.SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                createAndShowGUI();
+            }
+        });
+    }
 }
