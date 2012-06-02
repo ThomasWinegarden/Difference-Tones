@@ -10,12 +10,15 @@ import java.awt.event.MouseMotionListener;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.SourceDataLine;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
  
 /* ScrollDemo2.java requires no other files. */
@@ -30,7 +33,7 @@ public class DifferenceTonesGUI extends JPanel
     public DifferenceTonesGUI() {
         super(new BorderLayout());
         area_ = new Dimension(0,0);
-        af_  = new AudioFormat(Tone.SAMPLE_RATE, 8, 1, true, true); 
+        af_  = new AudioFormat(Tone.SAMPLE_RATE, 8, 2, true, true); 
         //Set up the drawing area.
         drawingPane_ = new ToneCanvas(this);
         drawingPane_.setBackground(Color.white);
@@ -48,19 +51,41 @@ public class DifferenceTonesGUI extends JPanel
     	try {
 	    	SourceDataLine line = AudioSystem.getSourceDataLine(af_);
 			line.open(af_, Tone.SAMPLE_RATE);
-			line.flush();
-//	    	PlayThread thread1 = new PlayThread(drawingPane_.synthesizeTones(),line);
-			PlayThread thread1 = new PlayThread(Tone.generateChromaticScale(500),line);
+	    	PlayThread thread1 = new PlayThread(drawingPane_.synthesizeTones(),line);
 	    	buttons_.playButton_.setEnabled(false);
 	    	thread1.start();
 	    	thread1.join();
 	    	buttons_.playButton_.setEnabled(true);
-	    	line.close();
     	}catch(Exception e){
     		e.printStackTrace();
     	}
     }
     
+    public void playDifferenceTone(){
+    	try {
+	    	SourceDataLine line = AudioSystem.getSourceDataLine(af_);
+			line.open(af_, Tone.SAMPLE_RATE);
+			//set to the right speaker so the distortion can occur
+			FloatControl control1 = (FloatControl)(line.getControl(FloatControl.Type.PAN));
+			control1.setValue(-1);
+			//set to the left speaker so the distortion can occur
+			SourceDataLine line2 = AudioSystem.getSourceDataLine(af_);
+			line2.open(af_, Tone.SAMPLE_RATE);
+			FloatControl control2 = (FloatControl)(line2.getControl(FloatControl.Type.PAN));
+			control2.setValue(-1);
+			Pair<Tone[],Tone[]> song = Tone.generateDifferenceMelody(drawingPane_.synthesizeTones());
+			PlayThread thread1 = new PlayThread(song.obj_1_,line);
+	    	PlayThread thread2 = new PlayThread(song.obj_2_,line2);
+	    	buttons_.playButton_.setEnabled(false);
+	    	thread1.start();
+	    	thread2.start();
+	    	thread2.join();
+	    	thread1.join();
+	    	buttons_.playButton_.setEnabled(true);
+    	}catch(Exception e){
+    		e.printStackTrace();
+    	}
+    }
     //Handle mouse events.
     public void mouseReleased(MouseEvent e) {
         boolean changed = false;
@@ -105,9 +130,14 @@ public class DifferenceTonesGUI extends JPanel
 		drawingPane_.revalidate();
 		drawingPane_.repaint();
 	}
-
-	public void mouseMoved(MouseEvent e) {
+	public void mouseMoved(MouseEvent e) {}
+	
+	public void canvasChanged() {
+		drawingPane_.revalidate();
+		drawingPane_.repaint();
+		
 	}
+
 	public ButtonPanel getButtonPanel(){
 		return buttons_;
 	}

@@ -94,6 +94,18 @@ public class ToneCanvas extends JPanel{
         	g.setColor(new Color(150,200,175));
         	g.drawLine(i, 0, i, getHeight());
         }
+        //paint the reference lines
+        g.setColor(new Color(255,80,80));
+        for(Note x: Note.values()){
+        	if(x.equals(Note.REST))
+        		continue;
+        	double exp = ((double) x.ordinal() - 1) / 12d;
+            int freq = (int) (Tone.BASE_FREQ * Math.pow(2d, exp));	
+        	int yloc = getPxValueOfHz(freq);
+        	g.drawLine(0, yloc, getWidth(),yloc);
+        	g.drawString(x.name(), 10 + 10*x.ordinal(), yloc);
+        }
+        
     }
 	public void removeCollidingLines(Rectangle note){
 		Iterator<Integer> iter = notes_.keySet().iterator();
@@ -104,29 +116,32 @@ public class ToneCanvas extends JPanel{
 				iter.remove();
 		}
 	}
+	
 	public Tone[] synthesizeTones(){
 		if(notes_.keySet().size() == 0)
 			return new Tone[0];
 		int duration = parent_.getButtonPanel().getDuration();
 		ArrayList<Tone> tones = new ArrayList<Tone>();
-		Integer[] rarr =  new Integer[notes_.keySet().size()];
-		for (int i = 0; i< rarr.length; i++)
-			rarr[i] = notes_.get(notes_.keySet().toArray()[i]).x;//wow thats a bad line of code
-		Arrays.sort(rarr);
-		int lastIndex =  notes_.get(rarr[rarr.length-1]).x;
+		Integer[] keys =  notes_.keySet().toArray(new Integer[0]);
+		Arrays.sort(keys);
+		int lastIndex = notes_.get(keys[keys.length-1]).x;
+		System.out.println("Last: " + lastIndex);
 		for(int i = 0 ; i<=lastIndex;){
+			System.out.println(i);
 			 Rectangle r = notes_.get(i);
 			 if(r == null){//add a rest
 				 tones.add(new Tone(0,duration));
 				 i+=NOTE_WIDTH;
 			 }
 			 else {
-				 int note_dur = r.width/NOTE_WIDTH;
-				 tones.add(new Tone(getHzValueOfPixel(r.y),duration));
-				 i+=note_dur;
+				 int note_dur =  (int)(r.width/NOTE_WIDTH);
+				 tones.add(new Tone(getHzValueOfPixel(r.y),note_dur*duration));
+				 i+=note_dur*NOTE_WIDTH;
 			 }
 		}
-		
+		for(Tone t: tones)
+			System.out.println(t);
+		System.out.println("------------");
 		return tones.toArray(new Tone[1]);
 	}
 	//returns what a one pixel difference corresponds to in frequency
@@ -138,6 +153,12 @@ public class ToneCanvas extends JPanel{
 		if (pix >= getHeight() - NOTE_HEIGHT)
 			return 0; //a rest
 		return (int)(pix*getScale()+parent_.getButtonPanel().getBottomHz());
+	}
+	
+	public int getPxValueOfHz(int hz){
+		if (hz <= 0)
+			return getHeight() - NOTE_HEIGHT;
+		return (int)((hz-parent_.getButtonPanel().getBottomHz())/getScale());
 	}
 	public static boolean linesCollide(int a1,int a2,int b1,int b2){
 		return lineContainsPoint(a1, b1, b2)

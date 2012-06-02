@@ -9,8 +9,8 @@ public class Tone {
     public static final int SAMPLE_RATE = 16 * 1024; // ~16KHz
     public static final int SECONDS = 2;
     public static final double BASE_FREQ = 440d;
-    public static final double LOWEST_AUIDIBLE_FREQ  = 100;
-    public static final double HIGHEST_AUDIBLE_FREQ = 2000;
+    public static final double LOWEST_AUIDIBLE_FREQ  = 20; //used for generating the difference tones
+    public static final double HIGHEST_AUDIBLE_FREQ = 1200;//used for generating the difference tones
     public static final double AUDIBLE_FREQ_RANGE = HIGHEST_AUDIBLE_FREQ -  LOWEST_AUIDIBLE_FREQ;
     protected double frequency_;
 	protected int duration_;
@@ -26,7 +26,9 @@ public class Tone {
             sine_window_[i] = (byte)(Math.sin(angle) * 127f);
         }
 	}
-	
+	public String toString(){
+		return "( " +frequency_ + " , " + duration_ + ")";  
+	}
 	public Tone(Note n, int duration) {
         this((n==Note.REST)? 0 : BASE_FREQ * Math.pow(2d, ((double) n.ordinal()) / 12d),duration);
 	}
@@ -116,6 +118,8 @@ enum Beat{
 	 Select,Eighth,Quarter,Half,Whole
 }
 
-
+enum DiffAlgorithm{
+	Random,Constant_Base,Constant_top
+}
 	
 	

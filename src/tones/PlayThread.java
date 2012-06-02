@@ -1,6 +1,7 @@
 package tones;
 
 import javax.sound.sampled.SourceDataLine;
+import javax.swing.JOptionPane;
 
 public class PlayThread extends Thread{
 	Tone[] toneList_;
@@ -13,13 +14,13 @@ public class PlayThread extends Thread{
 	@Override
 	public void run(){
 		try{
-			 for  (Tone n : toneList_) {
-				System.out.println("Playing Note: " + n.frequency_);
+			line_.start();
+			for  (Tone n : toneList_) {
 				 n.play(line_);
 			 }
 		}
 		catch(Exception e){
-			System.out.println("Thread: " + this.getId() + " could not play tone");
+			JOptionPane.showMessageDialog(null, "Something went wrong!");
 		}
 	}
 }
