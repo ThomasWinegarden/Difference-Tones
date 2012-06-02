@@ -72,7 +72,7 @@ public class DifferenceTonesGUI extends JPanel
 			SourceDataLine line2 = AudioSystem.getSourceDataLine(af_);
 			line2.open(af_, Tone.SAMPLE_RATE);
 			FloatControl control2 = (FloatControl)(line2.getControl(FloatControl.Type.PAN));
-			control2.setValue(-1);
+			control2.setValue(1);
 			Pair<Tone[],Tone[]> song = Tone.generateDifferenceMelody(drawingPane_.synthesizeTones());
 			PlayThread thread1 = new PlayThread(song.obj_1_,line);
 	    	PlayThread thread2 = new PlayThread(song.obj_2_,line2);
